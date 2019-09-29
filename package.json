@@ -1,0 +1,25 @@
+{
+  "name": "ipl-fun",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "scripts": {
+    "main": "node --experimental-worker dist/index.js",
+    "watch-ts": "tsc -w",
+    "watch-node": "npx nodemon dist/index.js",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Nodemon\" -c \"yellow.bold,green.bold\" \"npm run watch-ts\" \"npm run watch-node\"",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/aws-sdk": "^2.7.0",
+    "@types/js-yaml": "^3.12.1",
+    "@types/node": "^12.7.8",
+    "concurrently": "^4.1.2",
+    "nodemon": "^1.19.2",
+    "typescript": "^3.6.3"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.537.0",
+    "js-yaml": "^3.13.1"
+  }
+}

@@ -1,0 +1,15 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Create an empty bucket
+      aws_s3:
+        bucket: "de.rockyj.ipl-data"
+        mode: create
+        region: eu-central-1
+    - name: upload all files
+      s3_sync:
+        bucket: "de.rockyj.ipl-data"
+        region: eu-central-1
+        file_root: ../data
