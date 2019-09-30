@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const aws_sdk_1 = __importDefault(require("aws-sdk"));
 const worker_threads_1 = require("worker_threads");
+const aggregateResult_1 = require("./aggregateResult");
 aws_sdk_1.default.config.update({
     region: 'eu-central-1',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -13,7 +14,6 @@ aws_sdk_1.default.config.update({
 const results = [];
 const Bucket = 'de.rockyj.ipl-data';
 const s3 = new aws_sdk_1.default.S3();
-let mostRunsMatch = null;
 new Promise((resolve, reject) => {
     s3.listObjects({ Bucket }, (err, data) => {
         if (err) {
@@ -22,36 +22,31 @@ new Promise((resolve, reject) => {
         }
         let count = 0;
         const numberToProcess = data.Contents.length;
+        const work = (rawData) => {
+            const worker = new worker_threads_1.Worker('./dist/worker.js', { workerData: rawData });
+            worker.once('message', message => {
+                count += 1;
+                results.push(message);
+                if (count === numberToProcess) {
+                    resolve(results);
+                }
+            });
+        };
         data.Contents.forEach(content => {
             const Key = content.Key;
-            s3.getObject({ Bucket, Key }, (err, data) => {
+            s3.getObject({ Bucket, Key }, (err, yamlData) => {
                 if (err) {
                     console.error('Error', err);
+                    reject();
                 }
                 else {
-                    const worker = new worker_threads_1.Worker('./dist/worker.js', { workerData: data.Body.toString() });
-                    worker.once('message', message => {
-                        count += 1;
-                        results.push(message);
-                        if (count === numberToProcess) {
-                            resolve(results);
-                        }
-                    });
+                    work(yamlData.Body.toString());
                 }
             });
         });
     });
 }).then((results) => {
-    const finalResult = results.reduce((agg, result) => {
-        if (result.runs.firstInnings.runs >= agg || result.runs.secondInnings.runs >= agg) {
-            agg =
-                result.runs.firstInnings.runs >= result.runs.secondInnings.runs
-                    ? result.runs.firstInnings.runs
-                    : result.runs.secondInnings.runs;
-            mostRunsMatch = result;
-        }
-        return agg;
-    }, 0);
+    const { finalResult, mostRunsMatch } = aggregateResult_1.aggregateResult(results);
     console.log(finalResult);
     console.log(mostRunsMatch);
 });
